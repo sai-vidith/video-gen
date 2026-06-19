@@ -189,8 +189,26 @@ async def synthesize_voiceover(text: str, output_path: str, voice_type: str = "m
         "British_female": "en-GB-SoniaNeural"
     }
     voice = voice_map.get(voice_type, "en-US-GuyNeural")
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(output_path)
+    try:
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(output_path)
+    except Exception as e:
+        print(f"Edge-TTS synthesis failed: {e}. Creating a silent dummy audio file.")
+        # Word-count duration calculation: ~2.5 words per second + 1.5s margin
+        words_count = len(text.split())
+        dur = max(3.0, (words_count / 2.5) + 1.5)
+        
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            
+        # Compile silent MP3 of correct duration
+        cmd = [
+            "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono",
+            "-t", str(dur), "-c:a", "libmp3lame", output_path
+        ]
+        subprocess.run(cmd, startupinfo=startupinfo, shell=False)
 
 async def generate_scene_video(assembled_prompt: str, camera_movement: str, face_b64_list: list, scene, groq_api_key: str | None, progress_callback) -> str:
     """Dispatches payload to Google Colab GPU endpoint, falling back to local simulation if offline."""

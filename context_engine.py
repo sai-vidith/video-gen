@@ -64,7 +64,7 @@ def refine_prompt(prompt: str) -> str:
     )
     
     payload = {
-        "model": "llama-3.3-70b",
+        "model": "gpt-oss-120b",
         "messages": [
             {"role": "system", "content": refinement_instruction},
             {"role": "user", "content": prompt}

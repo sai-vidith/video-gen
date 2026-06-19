@@ -146,7 +146,7 @@ with st.sidebar:
                 col_idx = idx % len(cols)
                 try:
                     img = Image.open(img_path)
-                    cols[col_idx].image(img, use_column_width=True, caption=f"Crop {idx+1}")
+                    cols[col_idx].image(img, use_container_width=True, caption=f"Crop {idx+1}")
                 except Exception as e:
                     cols[col_idx].error("Error")
         else:
@@ -210,7 +210,7 @@ if st.button("🚀 Trigger Generation Pipeline"):
     with st.expander("👁️ View Compiled Storyboard Scenes Details", expanded=True):
         st.write(f"**Global Aesthetic Style:** {storyboard.global_style}")
         st.write(f"**Global Voice Selection:** {storyboard.global_voice}")
-        st.json(storyboard.dict())
+        st.json(storyboard.model_dump())
 
     # 2. Sequential Generation Execution
     st.subheader("⚡ Real-Time Scene Generation Process")
