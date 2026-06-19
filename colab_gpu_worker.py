@@ -135,7 +135,7 @@ def _load_ltx():
     gc.collect()
     gc.collect()
 
-    from diffusers import LTXImageToVideoPipeline, LTXVideoTransformer3DModel, AutoencoderKLTXVideo, FlowMatchEulerDiscreteScheduler
+    from diffusers import LTXImageToVideoPipeline, LTXVideoTransformer3DModel, AutoencoderKLLTXVideo, FlowMatchEulerDiscreteScheduler
     from transformers import T5EncoderModel, T5TokenizerFast
 
     print("🔄 Loading tokenizer and scheduler...")
@@ -143,7 +143,7 @@ def _load_ltx():
     scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained("Lightricks/LTX-Video-0.9.7-dev", subfolder="scheduler")
 
     print("🔄 Loading VAE model directly to device...")
-    vae = AutoencoderKLTXVideo.from_pretrained(
+    vae = AutoencoderKLLTXVideo.from_pretrained(
         "Lightricks/LTX-Video-0.9.7-dev",
         subfolder="vae",
         torch_dtype=torch.float16,
