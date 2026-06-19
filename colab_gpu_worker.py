@@ -147,8 +147,9 @@ def _load_ltx():
         "Lightricks/LTX-Video-0.9.7-dev",
         subfolder="vae",
         torch_dtype=torch.float16,
-        low_cpu_mem_usage=True
-    ).to(device)
+        low_cpu_mem_usage=True,
+        device_map={"": device}
+    )
 
     print("🔄 Loading LTX-Video T5 Text Encoder with device_map='auto'...")
     text_encoder = T5EncoderModel.from_pretrained(
@@ -164,8 +165,9 @@ def _load_ltx():
         "Lightricks/LTX-Video-0.9.7-dev",
         subfolder="transformer",
         torch_dtype=torch.float16,
-        low_cpu_mem_usage=True
-    ).to(device)
+        low_cpu_mem_usage=True,
+        device_map={"": device}
+    )
 
     print("🔄 Constructing pipeline directly...")
     _ltx_pipe = LTXImageToVideoPipeline(
