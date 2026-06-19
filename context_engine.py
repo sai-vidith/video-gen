@@ -59,6 +59,9 @@ def refine_prompt(prompt: str) -> str:
         "Your task is to take a raw, simple story idea or script input and refine it into a highly detailed, "
         "expanded cinematic script suitable for generating visual storyboards. "
         "Expand the characters, environments, actions, lighting suggestions, and dramatic structure. "
+        "Analyze the user's input for any specific requested art style, medium, or visual aesthetic "
+        "(e.g., 3D animation, Pixar style, anime, pencil sketch, oil painting, photorealism) and you MUST "
+        "explicitly maintain, emphasize, and describe this requested art style in the refined screenplay. "
         "Format the output as a clean, cohesive 10-paragraph narrative that tells the story sequentially. "
         "Do not include any intro, outro, or meta-commentary. Output the refined story text only."
     )
@@ -102,15 +105,17 @@ def generate_storyboard(prompt: str) -> VideoDAGPayload:
         
         system_instruction = (
             "You are an expert short-form viral video producer and cinematographer. Split the user story into "
-            "exactly 10 storyboard scenes. You must respond ONLY with a raw JSON object matching the following Pydantic schema structure:\n"
+            "exactly 10 storyboard scenes. Detect any specific visual art style requested by the user (e.g., 3D animation, cartoon, anime, sketch, photorealistic). "
+            "Set the global_style field to exactly match this style (do not just copy the cinematic film noir example unless requested), and ensure all individual scene visual_prompts are written using terminology matching that style (for example, if style is 3D animation, describe elements as 'Pixar-style 3D rendered character model, stylized features'). "
+            "You must respond ONLY with a raw JSON object matching the following Pydantic schema structure:\n"
             "{\n"
-            "  \"global_style\": \"cinematic film noir, volumetric lighting, high photorealism\",\n"
+            "  \"global_style\": \"cinematic film noir, volumetric lighting, high photorealism (REPLACE WITH USER STYLE)\",\n"
             "  \"global_voice\": \"male_narrator | female_narrator | child | deep_voice | British_male | British_female\",\n"
             "  \"scenes\": [\n"
             "    {\n"
             "      \"id\": \"scene_1\",\n"
             "      \"scene_type\": \"hook\",\n"
-            "      \"visual_prompt\": \"Description of scene\",\n"
+            "      \"visual_prompt\": \"Description of scene matching the requested style\",\n"
             "      \"lighting\": \"Lighting description\",\n"
             "      \"camera_angle\": \"Camera angle\",\n"
             "      \"camera_movement\": \"Camera movement\",\n"
@@ -118,13 +123,13 @@ def generate_storyboard(prompt: str) -> VideoDAGPayload:
             "      \"color_palette\": \"Color grade profile\",\n"
             "      \"mood\": \"Emotional mood\",\n"
             "      \"voiceover_text\": \"Voiceover caption sentence under 15 words\",\n"
-            "      \"reference_search_query\": \"Short image search query\",\n"
+            "      \"reference_search_query\": \"Short image search query matching the requested style\",\n"
             "      \"needs_face\": true,\n"
             "      \"search_queries\": [\"query 1\", \"query 2\", \"query 3\"]\n"
             "    }\n"
             "  ]\n"
             "}\n"
-            "For needs_face, use true if the main character's face/body is in the scene, otherwise false. For search_queries, provide 3 diverse search queries to find visual reference photos. Do not include markdown wrappers (like ```json), commentary, or extra text. Output raw JSON only."
+            "For needs_face, use true if the main character's face/body is in the scene, otherwise false. For search_queries, provide 3 diverse search queries to find visual reference photos matching the requested style. Do not include markdown wrappers (like ```json), commentary, or extra text. Output raw JSON only."
         )
         
         try:
@@ -322,9 +327,11 @@ def generate_storyboard(prompt: str) -> VideoDAGPayload:
         
         system_instruction = (
             "You are an expert short-form viral video producer and cinematographer. Split the user prompt/story into "
-            "exactly 10 storyboard scenes to make a full 60-second video. Keep each visual prompt highly descriptive. "
-            "Generate detailed cinematic attributes (lighting, lens, camera angle, camera movement, color grading, mood, reference query, needs_face, search_queries) "
-            "for diffusion model generation. Choose a global_voice (male_narrator | female_narrator | child | deep_voice | British_male | British_female) appropriate for the story. Keep each voiceover caption clean and under 15 words."
+            "exactly 10 storyboard scenes to make a full 60-second video. Analyze the prompt for any specific requested art style, medium, or aesthetic "
+            "(e.g., 3D animation, Pixar style, anime, sketch, photorealism). Set the global_style to reflect this exact visual style, and ensure "
+            "all individual scene visual_prompts are written using terminology matching that style (for example, if style is 3D animation, describe elements as 'Pixar-style 3D rendered character model, stylized features'). "
+            "Keep each visual prompt highly descriptive. Generate detailed cinematic attributes (lighting, lens, camera angle, camera movement, color grading, mood, reference query, needs_face, search_queries) for diffusion model generation. "
+            "Choose a global_voice (male_narrator | female_narrator | child | deep_voice | British_male | British_female) appropriate for the story. Keep each voiceover caption clean and under 15 words."
         )
         
         response = client.models.generate_content(
@@ -354,15 +361,17 @@ def generate_groq_storyboard(prompt_text: str, api_key: str) -> VideoDAGPayload:
     
     system_instruction = (
         "You are an expert short-form viral video producer and cinematographer. Split the user story into "
-        "exactly 10 storyboard scenes. You must respond ONLY with a raw JSON object matching the following Pydantic schema structure:\n"
+        "exactly 10 storyboard scenes. Detect any specific visual art style requested by the user (e.g., 3D animation, cartoon, anime, sketch, photorealistic). "
+        "Set the global_style field to exactly match this style (do not just copy the cinematic film noir example unless requested), and ensure all individual scene visual_prompts are written using terminology matching that style (for example, if style is 3D animation, describe elements as 'Pixar-style 3D rendered character model, stylized features'). "
+        "You must respond ONLY with a raw JSON object matching the following Pydantic schema structure:\n"
         "{\n"
-        "  \"global_style\": \"cinematic film noir, volumetric lighting, high photorealism\",\n"
+        "  \"global_style\": \"cinematic film noir, volumetric lighting, high photorealism (REPLACE WITH USER STYLE)\",\n"
         "  \"global_voice\": \"male_narrator | female_narrator | child | deep_voice | British_male | British_female\",\n"
         "  \"scenes\": [\n"
         "    {\n"
         "      \"id\": \"scene_1\",\n"
         "      \"scene_type\": \"hook\",\n"
-        "      \"visual_prompt\": \"Description of scene\",\n"
+        "      \"visual_prompt\": \"Description of scene matching the requested style\",\n"
         "      \"lighting\": \"Lighting description\",\n"
         "      \"camera_angle\": \"Camera angle\",\n"
         "      \"camera_movement\": \"Camera movement\",\n"
@@ -370,13 +379,13 @@ def generate_groq_storyboard(prompt_text: str, api_key: str) -> VideoDAGPayload:
         "      \"color_palette\": \"Color grade profile\",\n"
         "      \"mood\": \"Emotional mood\",\n"
         "      \"voiceover_text\": \"Voiceover caption sentence under 15 words\",\n"
-        "      \"reference_search_query\": \"Short image search query\",\n"
+        "      \"reference_search_query\": \"Short image search query matching the requested style\",\n"
         "      \"needs_face\": true,\n"
         "      \"search_queries\": [\"query 1\", \"query 2\", \"query 3\"]\n"
         "    }\n"
         "  ]\n"
         "}\n"
-        "For needs_face, use true if the main character's face/body is in the scene, otherwise false. For search_queries, provide 3 diverse search queries to find visual reference photos. Do not include markdown wrappers (like ```json), commentary, or extra text. Output raw JSON only."
+        "For needs_face, use true if the main character's face/body is in the scene, otherwise false. For search_queries, provide 3 diverse search queries to find visual reference photos matching the requested style. Do not include markdown wrappers (like ```json), commentary, or extra text. Output raw JSON only."
     )
     
     payload = {
