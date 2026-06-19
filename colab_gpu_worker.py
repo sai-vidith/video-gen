@@ -310,7 +310,7 @@ async def health():
         "status": "ok",
         "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
         "vram_used_gb": round(torch.cuda.memory_allocated() / 1e9, 2) if torch.cuda.is_available() else 0,
-        "vram_total_gb": round(torch.cuda.get_device_properties(0).total_mem / 1e9, 2) if torch.cuda.is_available() else 0,
+        "vram_total_gb": round(torch.cuda.get_device_properties(0).total_memory / 1e9, 2) if torch.cuda.is_available() else 0,
     }
 
 
@@ -325,7 +325,7 @@ if __name__ == "__main__":
     print(f"   Device: {device}")
     if torch.cuda.is_available():
         print(f"   GPU: {torch.cuda.get_device_name(0)}")
-        print(f"   VRAM: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB")
+        print(f"   VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
     print("Starting FastAPI server in a background thread...")
     server_thread = threading.Thread(target=start_server, daemon=True)
