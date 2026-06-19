@@ -132,7 +132,7 @@ def _load_ltx():
     # Ensure SDXL is unloaded first
     _unload_sdxl()
 
-    from diffusers import LTXImageToVideoPipeline
+    from diffusers import LTXImageToVideoPipeline, LTXVideoTransformer3DModel
     from transformers import T5EncoderModel
 
     print("🔄 Loading LTX-Video T5 Text Encoder with device_map='auto'...")
@@ -144,10 +144,20 @@ def _load_ltx():
         device_map="auto"
     )
 
+    print("🔄 Loading LTX-Video Transformer with device_map='auto'...")
+    transformer = LTXVideoTransformer3DModel.from_pretrained(
+        "Lightricks/LTX-Video-0.9.7-dev",
+        subfolder="transformer",
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
+        device_map="auto"
+    )
+
     print("🔄 Loading LTX-Video I2V pipeline components...")
     _ltx_pipe = LTXImageToVideoPipeline.from_pretrained(
         "Lightricks/LTX-Video-0.9.7-dev",
         text_encoder=text_encoder,
+        transformer=transformer,
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True
     )
