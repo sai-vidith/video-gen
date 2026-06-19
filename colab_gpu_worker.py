@@ -66,6 +66,10 @@ def _unload_sdxl():
     global _sdxl_pipe
     if _sdxl_pipe is not None:
         print("♻️ Unloading SDXL from memory...")
+        try:
+            _sdxl_pipe.to("cpu")
+        except Exception as e:
+            print(f"Failed to offload SDXL to CPU: {e}")
         del _sdxl_pipe
         _sdxl_pipe = None
         _flush_vram()
@@ -77,6 +81,10 @@ def _unload_ltx():
     global _ltx_pipe
     if _ltx_pipe is not None:
         print("♻️ Unloading LTX-Video from memory...")
+        try:
+            _ltx_pipe.to("cpu")
+        except Exception as e:
+            print(f"Failed to offload LTX-Video to CPU: {e}")
         del _ltx_pipe
         _ltx_pipe = None
         _flush_vram()
@@ -321,6 +329,7 @@ async def generate(req: GenerateRequest):
                     num_inference_steps=25,
                     guidance_scale=7.0
                 ).images[0]
+                del pipe
             except Exception as e:
                 print(f"   ❌ SDXL text-only generation failed: {e}")
                 return Response(
