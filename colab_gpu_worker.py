@@ -129,8 +129,11 @@ def _load_ltx():
     if _ltx_pipe is not None:
         return _ltx_pipe
 
-    # Ensure SDXL is unloaded first
+    # Ensure SDXL is unloaded first and clear CPU RAM aggressively
     _unload_sdxl()
+    import gc
+    gc.collect()
+    gc.collect()
 
     from diffusers import LTXImageToVideoPipeline, LTXVideoTransformer3DModel
     from transformers import T5EncoderModel
@@ -144,13 +147,12 @@ def _load_ltx():
         device_map="auto"
     )
 
-    print("🔄 Loading LTX-Video Transformer with device_map='auto'...")
+    print("🔄 Loading LTX-Video Transformer with low_cpu_mem_usage...")
     transformer = LTXVideoTransformer3DModel.from_pretrained(
         "Lightricks/LTX-Video-0.9.7-dev",
         subfolder="transformer",
         torch_dtype=torch.float16,
-        low_cpu_mem_usage=True,
-        device_map="auto"
+        low_cpu_mem_usage=True
     )
 
     print("🔄 Loading LTX-Video I2V pipeline components...")
