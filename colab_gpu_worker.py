@@ -133,11 +133,21 @@ def _load_ltx():
     _unload_sdxl()
 
     from diffusers import LTXImageToVideoPipeline
+    from transformers import T5EncoderModel
 
-    print("🔄 Loading LTX-Video I2V pipeline in float16 precision...")
+    print("🔄 Loading LTX-Video T5 Text Encoder with device_map='auto'...")
+    text_encoder = T5EncoderModel.from_pretrained(
+        "Lightricks/LTX-Video-0.9.7-dev",
+        subfolder="text_encoder",
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True,
+        device_map="auto"
+    )
 
+    print("🔄 Loading LTX-Video I2V pipeline components...")
     _ltx_pipe = LTXImageToVideoPipeline.from_pretrained(
         "Lightricks/LTX-Video-0.9.7-dev",
+        text_encoder=text_encoder,
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True
     )
