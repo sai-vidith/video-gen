@@ -135,8 +135,20 @@ def _load_ltx():
     gc.collect()
     gc.collect()
 
-    from diffusers import LTXImageToVideoPipeline, LTXVideoTransformer3DModel
-    from transformers import T5EncoderModel
+    from diffusers import LTXImageToVideoPipeline, LTXVideoTransformer3DModel, AutoencoderKLTXVideo, FlowMatchEulerDiscreteScheduler
+    from transformers import T5EncoderModel, T5TokenizerFast
+
+    print("🔄 Loading tokenizer and scheduler...")
+    tokenizer = T5TokenizerFast.from_pretrained("Lightricks/LTX-Video-0.9.7-dev", subfolder="tokenizer")
+    scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained("Lightricks/LTX-Video-0.9.7-dev", subfolder="scheduler")
+
+    print("🔄 Loading VAE model directly to device...")
+    vae = AutoencoderKLTXVideo.from_pretrained(
+        "Lightricks/LTX-Video-0.9.7-dev",
+        subfolder="vae",
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True
+    ).to(device)
 
     print("🔄 Loading LTX-Video T5 Text Encoder with device_map='auto'...")
     text_encoder = T5EncoderModel.from_pretrained(
@@ -147,21 +159,21 @@ def _load_ltx():
         device_map="auto"
     )
 
-    print("🔄 Loading LTX-Video Transformer with low_cpu_mem_usage...")
+    print("🔄 Loading LTX-Video Transformer directly to device...")
     transformer = LTXVideoTransformer3DModel.from_pretrained(
         "Lightricks/LTX-Video-0.9.7-dev",
         subfolder="transformer",
         torch_dtype=torch.float16,
         low_cpu_mem_usage=True
-    )
+    ).to(device)
 
-    print("🔄 Loading LTX-Video I2V pipeline components...")
-    _ltx_pipe = LTXImageToVideoPipeline.from_pretrained(
-        "Lightricks/LTX-Video-0.9.7-dev",
+    print("🔄 Constructing pipeline directly...")
+    _ltx_pipe = LTXImageToVideoPipeline(
+        scheduler=scheduler,
+        vae=vae,
         text_encoder=text_encoder,
-        transformer=transformer,
-        torch_dtype=torch.float16,
-        low_cpu_mem_usage=True
+        tokenizer=tokenizer,
+        transformer=transformer
     )
     
     # Enable CPU offload for T4 VRAM management
