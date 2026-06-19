@@ -283,7 +283,7 @@ async def generate_scene_video(assembled_prompt: str, camera_movement: str, face
             "camera_movement": camera_movement,
             "width": 768,
             "height": 512,
-            "num_frames": 97
+            "num_frames": 49
         }
         
         # CRITICAL: ngrok-skip-browser-warning bypasses free ngrok's interstitial HTML page

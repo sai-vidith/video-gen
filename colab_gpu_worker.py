@@ -49,7 +49,7 @@ class GenerateRequest(BaseModel):
     needs_face: bool = False               # Whether this scene requires face consistency
     width: int = 768
     height: int = 512
-    num_frames: int = 97                   # ~4 seconds at 24fps
+    num_frames: int = 49                   # ~2 seconds at 24fps
 
 
 # ── VRAM Management ──
@@ -132,11 +132,11 @@ def _load_ltx():
 
     from diffusers import LTXImageToVideoPipeline
 
-    print("🔄 Loading LTX-Video I2V pipeline...")
+    print("🔄 Loading LTX-Video I2V pipeline in float16 precision...")
 
     _ltx_pipe = LTXImageToVideoPipeline.from_pretrained(
         "Lightricks/LTX-Video-0.9.7-dev",
-        torch_dtype=torch.bfloat16
+        torch_dtype=torch.float16
     )
     
     # Enable CPU offload for T4 VRAM management
@@ -150,6 +150,7 @@ def _load_ltx():
 def generate_keyframe_with_sdxl(prompt: str, face_images: List[Image.Image]) -> Image.Image:
     """Generate a face-consistent keyframe using SDXL + IP-Adapter."""
     pipe = _load_sdxl()
+    pipe.set_ip_adapter_scale(0.7)
 
     print(f"🎨 Generating face-locked keyframe: {prompt[:60]}...")
     keyframe = pipe(
@@ -170,7 +171,7 @@ def animate_image_with_ltx(
     prompt: str,
     width: int = 768,
     height: int = 512,
-    num_frames: int = 97
+    num_frames: int = 49
 ) -> bytes:
     """Animate a still image into video using LTX-Video I2V."""
     pipe = _load_ltx()
@@ -231,7 +232,7 @@ async def generate(req: GenerateRequest):
 
     starting_image = None
 
-    # ── Path A: Web-sourced reference image ──
+    # ── Path A: Using web-sourced reference image ──
     if req.reference_image and not req.needs_face:
         print("📸 Path A: Using web-sourced reference image")
         try:
@@ -262,12 +263,19 @@ async def generate(req: GenerateRequest):
                 starting_image = None
 
     # ── Path C: No reference, no face → SDXL text-only generation ──
+    # Note: Because the IP-Adapter weight is loaded into the UNet model, we MUST satisfy the
+    # config's expectation for image embeddings even for text-only generation.
+    # We do this by feeding a dummy black image with an IP-Adapter scale of 0.0.
     if starting_image is None:
-        print("🖼️ Path C: Generating keyframe with SDXL (text-only)")
+        print("🖼️ Path C: Generating keyframe with SDXL (text-only + dummy IP-Adapter scale 0.0)")
         try:
             pipe = _load_sdxl()
+            pipe.set_ip_adapter_scale(0.0)
+            dummy_img = Image.new("RGB", (224, 224), color="black")
+            
             starting_image = pipe(
                 prompt=req.prompt,
+                ip_adapter_image=[[dummy_img]],
                 width=req.width,
                 height=req.height,
                 num_inference_steps=25,
