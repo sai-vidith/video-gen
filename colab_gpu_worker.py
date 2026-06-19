@@ -100,14 +100,16 @@ def _load_sdxl():
     
     image_encoder = CLIPVisionModelWithProjection.from_pretrained(
         "laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True
     )
 
     _sdxl_pipe = StableDiffusionXLPipeline.from_pretrained(
         "stabilityai/stable-diffusion-xl-base-1.0",
         image_encoder=image_encoder,
         torch_dtype=torch.float16,
-        variant="fp16"
+        variant="fp16",
+        low_cpu_mem_usage=True
     )
     _sdxl_pipe.load_ip_adapter(
         "h94/IP-Adapter",
@@ -136,7 +138,8 @@ def _load_ltx():
 
     _ltx_pipe = LTXImageToVideoPipeline.from_pretrained(
         "Lightricks/LTX-Video-0.9.7-dev",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        low_cpu_mem_usage=True
     )
     
     # Enable CPU offload for T4 VRAM management
@@ -230,85 +233,92 @@ async def generate(req: GenerateRequest):
     print(f"   Prompt: {req.prompt[:80]}...")
     print(f"{'='*60}")
 
-    starting_image = None
+    try:
+        starting_image = None
 
-    # ── Path A: Using web-sourced reference image ──
-    if req.reference_image and not req.needs_face:
-        print("📸 Path A: Using web-sourced reference image")
-        try:
-            img_bytes = base64.b64decode(req.reference_image)
-            starting_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-            print(f"   Reference image decoded: {starting_image.size}")
-        except Exception as e:
-            print(f"   ⚠️ Failed to decode reference image: {e}")
-            starting_image = None
-
-    # ── Path B: Face-locked keyframe with SDXL ──
-    if starting_image is None and req.needs_face and req.face_images:
-        print("👤 Path B: Generating face-locked keyframe with SDXL")
-        face_pil_images = []
-        for img_b64 in req.face_images:
+        # ── Path A: Using web-sourced reference image ──
+        if req.reference_image and not req.needs_face:
+            print("📸 Path A: Using web-sourced reference image")
             try:
-                img_bytes = base64.b64decode(img_b64)
-                img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                face_pil_images.append(img)
+                img_bytes = base64.b64decode(req.reference_image)
+                starting_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                print(f"   Reference image decoded: {starting_image.size}")
             except Exception as e:
-                print(f"   ⚠️ Failed to decode face image: {e}")
-
-        if face_pil_images:
-            try:
-                starting_image = generate_keyframe_with_sdxl(req.prompt, face_pil_images)
-            except Exception as e:
-                print(f"   ❌ SDXL keyframe generation failed: {e}")
+                print(f"   ⚠️ Failed to decode reference image: {e}")
                 starting_image = None
 
-    # ── Path C: No reference, no face → SDXL text-only generation ──
-    # Note: Because the IP-Adapter weight is loaded into the UNet model, we MUST satisfy the
-    # config's expectation for image embeddings even for text-only generation.
-    # We do this by feeding a dummy black image with an IP-Adapter scale of 0.0.
-    if starting_image is None:
-        print("🖼️ Path C: Generating keyframe with SDXL (text-only + dummy IP-Adapter scale 0.0)")
+        # ── Path B: Face-locked keyframe with SDXL ──
+        if starting_image is None and req.needs_face and req.face_images:
+            print("👤 Path B: Generating face-locked keyframe with SDXL")
+            face_pil_images = []
+            for img_b64 in req.face_images:
+                try:
+                    img_bytes = base64.b64decode(img_b64)
+                    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                    face_pil_images.append(img)
+                except Exception as e:
+                    print(f"   ⚠️ Failed to decode face image: {e}")
+
+            if face_pil_images:
+                try:
+                    starting_image = generate_keyframe_with_sdxl(req.prompt, face_pil_images)
+                except Exception as e:
+                    print(f"   ❌ SDXL keyframe generation failed: {e}")
+                    starting_image = None
+
+        # ── Path C: No reference, no face → SDXL text-only generation ──
+        # Note: Because the IP-Adapter weight is loaded into the UNet model, we MUST satisfy the
+        # config's expectation for image embeddings even for text-only generation.
+        # We do this by feeding a dummy black image with an IP-Adapter scale of 0.0.
+        if starting_image is None:
+            print("🖼️ Path C: Generating keyframe with SDXL (text-only + dummy IP-Adapter scale 0.0)")
+            try:
+                pipe = _load_sdxl()
+                pipe.set_ip_adapter_scale(0.0)
+                dummy_img = Image.new("RGB", (224, 224), color="black")
+                
+                starting_image = pipe(
+                    prompt=req.prompt,
+                    ip_adapter_image=[[dummy_img]],
+                    width=req.width,
+                    height=req.height,
+                    num_inference_steps=25,
+                    guidance_scale=7.0
+                ).images[0]
+            except Exception as e:
+                print(f"   ❌ SDXL text-only generation failed: {e}")
+                return Response(
+                    content=json.dumps({"error": f"Keyframe generation failed: {e}"}),
+                    status_code=500,
+                    media_type="application/json"
+                )
+
+        # ── Animate with LTX-Video ──
         try:
-            pipe = _load_sdxl()
-            pipe.set_ip_adapter_scale(0.0)
-            dummy_img = Image.new("RGB", (224, 224), color="black")
-            
-            starting_image = pipe(
+            video_bytes = animate_image_with_ltx(
+                image=starting_image,
                 prompt=req.prompt,
-                ip_adapter_image=[[dummy_img]],
                 width=req.width,
                 height=req.height,
-                num_inference_steps=25,
-                guidance_scale=7.0
-            ).images[0]
+                num_frames=req.num_frames
+            )
         except Exception as e:
-            print(f"   ❌ SDXL text-only generation failed: {e}")
+            print(f"❌ LTX-Video animation failed: {e}")
+            import traceback
+            traceback.print_exc()
             return Response(
-                content=json.dumps({"error": f"Keyframe generation failed: {e}"}),
+                content=json.dumps({"error": f"Video animation failed: {e}"}),
                 status_code=500,
                 media_type="application/json"
             )
 
-    # ── Animate with LTX-Video ──
-    try:
-        video_bytes = animate_image_with_ltx(
-            image=starting_image,
-            prompt=req.prompt,
-            width=req.width,
-            height=req.height,
-            num_frames=req.num_frames
-        )
-    except Exception as e:
-        print(f"❌ LTX-Video animation failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return Response(
-            content=json.dumps({"error": f"Video animation failed: {e}"}),
-            status_code=500,
-            media_type="application/json"
-        )
+        return Response(content=video_bytes, media_type="video/mp4")
 
-    return Response(content=video_bytes, media_type="video/mp4")
+    finally:
+        print("🧼 Cleaning up all memory after request completion...")
+        _unload_sdxl()
+        _unload_ltx()
+        _flush_vram()
 
 
 # ── Health Check ──
