@@ -1,0 +1,32 @@
+# Environment
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Media outputs
+profiles/
+*.mp4
+*.mp3
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+comfyui.log
+
+# Client materials (personal)
+client/

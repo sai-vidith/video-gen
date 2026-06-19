@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/Streamlit-1.30+-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
   <img src="https://img.shields.io/badge/Groq-Llama_3.3-F55036?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Wan_2.1-I2V-blueviolet?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/LTX--Video-I2V-blueviolet?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Edge--TTS-Neural-00A4EF?style=for-the-badge" />
 </p>
 
@@ -37,7 +37,7 @@ For each scene: DDG multi-query search → automated filtering → Groq Vision s
 
     ↓  Kaggle T4 GPU Worker
 
-Best reference image → Wan 2.1 Image-to-Video animation (or SDXL face-lock → Wan I2V)
+Best reference image → LTX-Video Image-to-Video animation (or SDXL face-lock → LTX-Video I2V)
 
     ↓  Edge-TTS + FFmpeg
 
@@ -81,8 +81,8 @@ Neural voiceover synthesis → Scene-audio alignment → 9:16 portrait reel comp
                  │              │
     ┌────────────▼──┐   ┌──────▼──────────────┐
     │ REFERENCE PATH│   │ FACE-LOCK PATH      │
-    │ Wan 2.1 I2V   │   │ SDXL+IP-Adapter     │
-    │ (10GB VRAM)   │   │ → del → Wan 2.1 I2V │
+    │ LTX-Video I2V │   │ SDXL+IP-Adapter     │
+    │ (12GB VRAM)   │   │ → del → LTX-Video   │
     └────────────┬──┘   └──────┬──────────────┘
                  │              │
          ┌───────▼──────────────▼───────┐
@@ -102,9 +102,9 @@ Neural voiceover synthesis → Scene-audio alignment → 9:16 portrait reel comp
 | **LLM Storyboarding** | Groq `llama-3.3-70b-versatile` with structured JSON output — parses any story into 10 cinematic scenes with lighting, lens, camera angle, mood, and color grading |
 | **3-Stage Visual Retrieval** | Multi-query DDG search → resolution/aspect/color filtering → Groq Vision (`llama-3.2-90b-vision-preview`) scoring — ensures only high-quality reference images reach the video model |
 | **Face Consistency** | SDXL + IP-Adapter Plus Face (ViT-H) for character scenes — maintains face identity across multiple scenes from a single photo upload |
-| **Video Animation** | Wan 2.1 5B Image-to-Video via HuggingFace `diffusers` — animates keyframes into 10-second video clips directly on GPU |
+| **Video Animation** | LTX-Video Image-to-Video via HuggingFace `diffusers` — animates keyframes into high-fidelity video clips directly on GPU |
 | **Neural Voiceover** | Edge-TTS with 6 voice profiles (male/female narrator, child, deep voice, British male/female) — infinite free high-quality speech synthesis |
-| **Smart VRAM Management** | Sequential model loading with full cleanup (del + gc + CUDA cache) — runs SDXL (7GB) and Wan 2.1 (10GB) on a single 16GB T4 without conflicts |
+| **Smart VRAM Management** | Sequential model loading with full cleanup (del + gc + CUDA cache) — runs SDXL (7GB) and LTX-Video (12GB) on a single 16GB T4 without conflicts |
 | **Portrait Video Output** | Automated center-crop + scale to 720×1280 (9:16) — optimized for Instagram Reels / TikTok / YouTube Shorts |
 
 ---
@@ -158,7 +158,7 @@ Video-DAG-Gen/
 ├── context_engine.py         # LLM storyboard generation (Groq/Gemini/Llama)
 ├── image_selector.py         # 3-stage reference image selection pipeline
 ├── video_pipeline.py         # TTS, video dispatch, FFmpeg compilation
-├── colab_gpu_worker.py       # Kaggle GPU worker (SDXL + Wan 2.1 diffusers)
+├── colab_gpu_worker.py       # Kaggle GPU worker (SDXL + LTX-Video diffusers)
 ├── colab_gpu_worker.ipynb    # Kaggle notebook for GPU deployment
 ├── requirements.txt          # Python dependencies
 ├── Agents.md                 # System configuration & data schemas
@@ -209,7 +209,7 @@ The system runs two large models on a single 16GB T4 GPU by **never loading both
 Timeline:
 t0  ──── SDXL loaded (7GB) ──── keyframe generated ──── SDXL deleted
 t1  ──── gc.collect() + torch.cuda.empty_cache() ────
-t2  ──── Wan 2.1 loaded (10GB) ──── video generated ──── Wan deleted
+t2  ──── LTX-Video loaded (12GB) ──── video generated ──── LTX-Video deleted
 t3  ──── gc.collect() ──── ready for next scene
 ```
 
@@ -224,17 +224,12 @@ The Groq Vision model evaluates each candidate with this scoring rubric:
 
 Only images scoring **≥ 6** are used. Below that threshold, the system falls back to SDXL keyframe generation.
 
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- [Wan-Video](https://github.com/Wan-Video/Wan2.1) — Open-source video generation model
+- [LTX-Video](https://github.com/Lightricks/LTX-Video) — Open-source real-time video generation model
 - [Groq](https://groq.com) — Ultra-fast LLM inference
 - [Edge-TTS](https://github.com/rany2k/edge-tts) — Microsoft Edge neural text-to-speech
 - [IP-Adapter](https://github.com/tencent-ailab/IP-Adapter) — Face-consistent image generation
