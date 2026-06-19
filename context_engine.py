@@ -35,7 +35,63 @@ def build_assembled_prompt(scene: StorySceneNode, global_style: str) -> str:
         f"Aesthetic global style: {global_style}."
     )
 
+def refine_prompt(prompt: str) -> str:
+    """
+    Uses Cerebras Llama-3.3-70b to expand a simple user story prompt into a highly detailed,
+    cinematic visual narrative with rich descriptions, key framing, lighting instructions,
+    and a cohesive scene-by-scene storyline.
+    """
+    api_key = os.getenv("CEREBRAS_API_KEY", "csk-n94j36ew6vp5p3538kwvpnvpyj8tvvrvdvnc2hwthh25fhmk").strip()
+    if not api_key:
+        print("[Cerebras] No API key configured. Skipping prompt refinement.")
+        return prompt
+        
+    print(f"[Cerebras] Refining prompt: '{prompt[:60]}...'")
+    import requests
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    refinement_instruction = (
+        "You are an expert Hollywood screenwriter and visual designer. "
+        "Your task is to take a raw, simple story idea or script input and refine it into a highly detailed, "
+        "expanded cinematic script suitable for generating visual storyboards. "
+        "Expand the characters, environments, actions, lighting suggestions, and dramatic structure. "
+        "Format the output as a clean, cohesive 10-paragraph narrative that tells the story sequentially. "
+        "Do not include any intro, outro, or meta-commentary. Output the refined story text only."
+    )
+    
+    payload = {
+        "model": "llama-3.3-70b",
+        "messages": [
+            {"role": "system", "content": refinement_instruction},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.7
+    }
+    
+    try:
+        r = requests.post(
+            "https://api.cerebras.ai/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=20
+        )
+        r.raise_for_status()
+        result = r.json()
+        refined_story = result["choices"][0]["message"]["content"].strip()
+        print(f"[Cerebras] Prompt successfully refined. Size: {len(refined_story)} chars")
+        return refined_story
+    except Exception as e:
+        print(f"[Cerebras] Refinement failed: {e}. Using original prompt.")
+        return prompt
+
 def generate_storyboard(prompt: str) -> VideoDAGPayload:
+    # 1. Refine the raw prompt into a cinematic visual narrative using Cerebras
+    prompt = refine_prompt(prompt)
+    
     api_key = os.getenv("GEMINI_API_KEY")
     
     # Define a helper function to compile a fallback using DuckDuckGo Free Llama-3 API
