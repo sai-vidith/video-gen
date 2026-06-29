@@ -1,0 +1,30 @@
+# Video-DAG-Gen GPU Worker configuration for campus cluster
+worker:
+  # FastAPI server port (the cluster nodes can expose this via the Ray dashboard)
+  port: 8000
+  host: "0.0.0.0"
+
+# Model settings
+sdxl:
+  model_id: "stabilityai/stable-diffusion-xl-base-1.0"
+  ip_adapter_repo: "h94/IP-Adapter"
+  ip_adapter_weight: "ip-adapter-plus-face_sdxl_vit-h.safetensors"
+  ip_adapter_scale: 0.7
+  inference_steps: 25
+  guidance_scale: 7.0
+
+ltx_video:
+  model_id: "Lightricks/LTX-Video-0.9.7-dev"
+  inference_steps: 40
+  guidance_scale: 5.0
+  fps: 24
+  default_width: 768
+  default_height: 512
+  default_num_frames: 49
+
+# Generation defaults
+generation:
+  default_width: 768
+  default_height: 512
+  default_num_frames: 49
+  negative_prompt: "worst quality, inconsistent motion, blurry, jittery, distorted, watermark"
